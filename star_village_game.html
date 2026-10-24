@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#101629">
+<title>별이 잠든 마을 — 달빛 탐험기</title>
+<style>
+:root{--bg:#0b1020;--panel:#17233a;--panel2:#202f4b;--edge:#637c9e;--text:#f6f0df;--muted:#b6c6dc;--gold:#ffd889;--mint:#a5efd1;--pink:#ffb6cb}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overscroll-behavior:none}
+body{padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom);display:flex;justify-content:center;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;touch-action:manipulation}
+.app{width:min(100%,560px);padding:10px 0 20px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 1px 10px}.brand{font-size:13px;color:var(--gold);font-weight:900;letter-spacing:.5px}.head-actions{display:flex;gap:6px}
+.btn{border:2px solid var(--edge);background:var(--panel2);padding:9px 10px;font-size:11px;box-shadow:0 3px 0 #060a14}.btn:active,.move:active,.option:active{transform:translateY(2px);box-shadow:0 1px 0 #060a14}
+.frame{border:3px solid #7186a7;background:#111a2c;padding:5px;box-shadow:0 6px 0 #050812}
+#world{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;background:#17243b}
+.hud{display:flex;justify-content:space-between;gap:8px;padding:8px 3px 2px;color:var(--muted);font-size:10px}.hud b{color:var(--gold)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.panel{border:2px solid var(--edge);background:var(--panel);padding:12px;min-width:0;box-shadow:0 3px 0 #060a14}.panel h2{font-size:12px;color:var(--gold);margin:0 0 8px}.panel p{font-size:11px;line-height:1.7;margin:0;color:var(--muted)}
+.controls{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(2,42px);gap:5px;justify-content:center;margin-top:9px}.move{border:2px solid var(--edge);background:#293a57;box-shadow:0 3px 0 #060a14;font-size:16px}.move.blank{visibility:hidden}.control-note{text-align:center;font-size:9px;color:#91a4bf;margin-top:8px}
+.action-row{display:flex;gap:6px;margin-top:10px}.action-row .btn{flex:1}
+.story{margin-top:12px;border:2px solid var(--edge);background:var(--panel);padding:14px;box-shadow:0 4px 0 #060a14}.kicker{font-size:9px;color:var(--mint);letter-spacing:2px;margin-bottom:7px}.story h1{font-size:19px;line-height:1.4;margin:0 0 8px}.story-text{font-size:12px;line-height:1.9;white-space:pre-line;color:#edf2fb;min-height:52px}.options{display:grid;gap:7px;margin-top:12px}.option{border:2px solid #7388a8;background:#2a3b58;text-align:left;padding:11px;font-size:11px;line-height:1.7;box-shadow:0 3px 0 #0b1222}.option:before{content:"✦ ";color:var(--gold)}.option:disabled{opacity:.5}
+.log{font-size:10px;line-height:1.7;color:var(--muted);margin-top:8px;min-height:15px}.footer{text-align:center;font-size:9px;color:#8295b2;line-height:1.8;margin-top:13px}
+.overlay{display:none;position:fixed;z-index:10;inset:0;background:#050914eF;align-items:center;justify-content:center;padding:16px;overflow:auto}.overlay.show{display:flex}.modal{width:min(100%,440px);max-height:90dvh;overflow:auto;border:3px solid #8198b8;background:var(--panel);padding:16px;box-shadow:0 8px 0 #03060d}.modal h2{font-size:17px;color:var(--gold);margin:0 0 10px}.modal p{font-size:11px;line-height:1.8;color:var(--muted)}.modal .option{width:100%;margin:5px 0}.slot{border:2px solid var(--edge);padding:10px;margin:8px 0;background:#111b2e}.slot b{font-size:11px;color:var(--gold)}.slot p{margin:5px 0}.slot-actions{display:flex;gap:6px}.slot-actions button{flex:1}.close{margin-top:10px;width:100%}
+.badge{display:inline-block;padding:3px 5px;border:1px solid #60799a;color:var(--mint);font-size:9px;margin:2px 3px 2px 0}
+@media(min-width:470px){.story{padding:18px}.story-text{font-size:13px}.panel{padding:14px}}
+</style>
+</head>
+<body>
+<main class="app">
+<header>
+  <div class="brand">✦ 별이 잠든 마을</div>
+  <div class="head-actions"><button class="btn" id="slotsBtn">저장 슬롯</button><button class="btn" id="bagBtn">가방</button></div>
+</header>
+<section class="frame">
+  <canvas id="world" width="320" height="224" aria-label="픽셀 탐험 맵"></canvas>
+  <div class="hud"><span>지역 <b id="region">별빛 마을</b></span><span>별 조각 <b id="shards">0</b> / 3</span><span id="clock">밤 1일째</span></div>
+</section>
+<div class="grid">
+  <section class="panel">
+    <h2>🕹 탐험 조작</h2>
+    <p>맵의 빈 곳을 터치해도 이동해. 방향 버튼으로 한 칸씩 움직일 수도 있어.</p>
+    <div class="controls">
+      <button class="move blank">·</button><button class="move" data-dir="up" aria-label="위로">▲</button><button class="move blank">·</button>
+      <button class="move" data-dir="left" aria-label="왼쪽">◀</button><button class="move" data-dir="down" aria-label="아래">▼</button><button class="move" data-dir="right" aria-label="오른쪽">▶</button>
+    </div>
+    <div class="control-note">빛나는 오브젝트 근처에서 조사 버튼을 눌러 봐.</div>
+    <div class="action-row"><button class="btn" id="interactBtn">조사하기</button><button class="btn" id="mapBtn">지도</button></div>
+  </section>
+  <section class="panel">
+    <h2>🎒 소지품</h2><p id="inventory">아직 발견한 물건이 없어.</p>
+    <h2 style="margin-top:13px">🗝 숨겨진 기록</h2><p id="quest">숲 어딘가에 숨겨진 별무늬를 찾아보자.</p>
+    <div class="action-row"><button class="btn" id="journalBtn">여행 일지</button></div>
+  </section>
+</div>
+<section class="story">
+  <div class="kicker" id="kicker">PROLOGUE · 첫 번째 밤</div>
+  <h1 id="storyTitle">사라진 별빛</h1>
+  <div class="story-text" id="storyText">마을의 가장 높은 언덕에서 별 하나가 사라지는 걸 보았다.</div>
+  <div class="options" id="options"></div>
+  <div class="log" id="log" aria-live="polite">작은 별 조각을 찾아 길을 밝혀 보자.</div>
+</section>
+<div class="footer">이 게임은 브라우저 저장소에 진행 상황을 보관해. 다른 기기와 자동 동기화되지는 않아.<br>아이폰에서는 Safari에서 플레이하는 것을 권장해.</div>
+</main>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<script>
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id), canvas=$("world"),ctx=canvas.getContext("2d");
+const TILE=16, W=20,H=14;
+const maps={
+ village:[
+ "####################",
+ "#....t......t.....##",
+ "#..####.....###....#",
+ "#..#..#..H..#.#....#",
+ "#..#..#.....#.#..t.#",
+ "#..####..D..#.#....#",
+ "#..........##......#",
+ "#.t....P...........#",
+ "#......===.........#",
+ "#..t...===.....t...#",
+ "#......===.........#",
+ "#....##########....#",
+ "#..................#",
+ "####################"],
+ forest:[
+ "####################",
+ "#t...#.......t.....#",
+ "#....#..###........#",
+ "#....#..#.#....t...#",
+ "#.......#.#........#",
+ "#..t....#.#..####..#",
+ "#.......#....#..#..#",
+ "#..####......#..#..#",
+ "#..#..#..t...#..#..#",
+ "#..#..#......#.....#",
+ "#..#..####...####..#",
+ "#..#...............#",
+ "#....t......S......#",
+ "####################"],
+ well:[
+ "####################",
+ "#t.................#",
+ "#......#####.......#",
+ "#......#...#.......#",
+ "#......# W #...t...#",
+ "#......#...#.......#",
+ "#......#####.......#",
+ "#..................#",
+ "#..t...............#",
+ "#...........t......#",
+ "#..............P...#",
+ "#..................#",
+ "#..................#",
+ "####################"]
+};
+const scenes={
+ intro:{k:"PROLOGUE · 첫 번째 밤",title:"사라진 별빛",text:"마을의 하늘에서 별 하나가 사라졌다.\\n할머니가 남긴 등불은 숲 쪽을 향해 희미하게 빛난다.\\n\\n먼저 마을을 둘러보자. 반짝이는 곳에는 단서가 있을지도 모른다.",opts:[["등불을 들고 마을을 탐험한다",()=>{S.story="none";say("마을을 천천히 돌아보자. 집 앞의 등불과 오래된 표지판을 조사해 봐.");}]]},
+ keeper:{k:"별빛 마을 · 만남",title:"등불지기의 부탁",text:"낡은 망토를 입은 등불지기가 너를 불러 세운다.\\n“별은 길을 잃었단다. 숲의 우물에 별 조각이 떨어졌을 거야.”\\n\\n그는 오래된 지도를 건넨다.",opts:[["지도를 받는다",()=>{addItem("낡은 지도");S.flags.keeper=true;S.story="none";say("지도에 숲의 입구가 표시되어 있다. 마을 북쪽 출구로 가자.");}]]},
+ well:{k:"달빛 우물 · 발견",title:"우물 속의 빛",text:"우물 안에서 작은 빛이 숨을 쉬듯 깜빡인다.\\n“나를 하늘로 돌려보내 줘.”\\n\\n빛은 손에 닿자 작은 별 조각으로 변한다.",opts:[["별 조각을 챙긴다",()=>{addItem("별 조각");S.flags.well=true;S.story="none";say("첫 번째 별 조각을 얻었다. 숲속의 숨겨진 표식을 찾아보자.");}]]},
+ secret:{k:"숨겨진 장소 · 비밀",title:"별무늬 바닥",text:"풀숲 뒤에 별무늬가 새겨진 돌이 있다. 세 개의 작은 홈이 희미하게 빛난다.\\n\\n이곳은 오래전 별을 보내던 장소였던 것 같다.",opts:[["비밀 기록을 읽는다",()=>{S.flags.secret=true;addItem("별무늬 기록");S.story="none";say("숨겨진 퀘스트 완료! 이 기록은 마지막 선택에 영향을 줄지도 모른다.");}]]},
+ finale:{k:"별의 정원 · 마지막 장",title:"길 잃은 별",text:"별은 작은 목소리로 묻는다.\\n“하늘로 돌아가면 이 마을을 잊게 될까? 여기 남으면 다른 별들이 나를 기다릴 텐데….”\\n\\n네가 모은 기억과 선택이 결말을 바꿀 것이다.",opts:[["별을 하늘로 돌려보낸다",()=>ending("sky")],["별이 마을에 머물 방법을 찾는다",()=>ending("home")],["숨겨진 기록을 보여 준다",()=>{if(S.flags.secret)ending("secret");else say("아직 이 선택의 의미를 알 수 없다. 숲의 비밀을 먼저 찾아보자.");}]]}
+};
+const initial=()=>({map:"village",x:3,y:7,items:[],flags:{},visited:[],story:"intro",days:1,ending:null,notes:[],slotName:""});
+let S=loadSlot(0)||initial(),activeSlot=0,moveTimer=null;
+function loadSlot(n){try{const x=localStorage.getItem("star-village-slot-"+n);if(!x)return null;const v=JSON.parse(x);return v&&maps[v.map]?v:null}catch(e){return null}}
+function save(n=activeSlot,quiet=false){try{localStorage.setItem("star-village-slot-"+n,JSON.stringify(S));if(!quiet)say("저장 슬롯 "+(n+1)+"에 저장했어.");}catch(e){say("저장에 실패했어. Safari 저장 공간 설정을 확인해 줘.");}}
+function say(t){$("log").textContent=t}
+function addItem(name){if(!S.items.includes(name)){S.items.push(name);say(name+" 획득!");}}
+function tile(x,y){return (maps[S.map][y]||"")[x]||"#"}
+function blocked(x,y){return "#H D".replace(/ /g,"").includes(tile(x,y))||x<0||x>=W||y<0||y>=H}
+function move(dx,dy){
+ if(S.story!=="none"||S.ending)return;
+ const nx=S.x+dx,ny=S.y+dy;if(blocked(nx,ny)){say("그쪽으로는 갈 수 없어.");return}
+ S.x=nx;S.y=ny;
+ if(S.map==="village"&&tile(nx,ny)==="D"){S.x=nx;S.y=ny;}
+ if(S.map==="village"&&nx===18&&ny===7){changeMap("forest",2,1);say("숲의 입구에 도착했다.");}
+ else if(S.map==="forest"&&nx===17&&ny===12){S.flags.wellRoute=true;changeMap("well",15,10);say("나무 사이로 달빛 우물이 나타났다.");}
+ else if(S.map==="well"&&nx===15&&ny===10){changeMap("forest",17,12);say("다시 숲으로 돌아왔다.");}
+ else {checkAuto();render();}
+ save(activeSlot,true);
+}
+function changeMap(m,x,y){S.map=m;S.x=x;S.y=y;if(!S.visited.includes(m))S.visited.push(m);render()}
+function checkAuto(){
+ if(S.map==="village"&&tile(S.x,S.y)==="H"&&!S.flags.keeper&&!S.flags.keeperSeen){S.flags.keeperSeen=true;openStory("keeper");}
+ if(S.map==="well"&&S.x===8&&S.y===4&&!S.flags.well)openStory("well");
+ if(S.map==="forest"&&S.x===15&&S.y===12&&!S.flags.secretSeen){S.flags.secretSeen=true;S.flags.secretPrompt=true;say("근처에 낯선 별무늬가 있어. 조사하기를 눌러 봐.");}
+}
+function interact(){
+ if(S.story!=="none"){showStory();return}
+ const t=tile(S.x,S.y);
+ if(S.map==="village"&&!S.flags.keeper&&((S.x>=9&&S.x<=11&&S.y>=3&&S.y<=5)||t==="H"))openStory("keeper");
+ else if(S.map==="well"&&!S.flags.well)openStory("well");
+ else if(S.map==="forest"&&S.flags.secretPrompt&&!S.flags.secret){openStory("secret");S.flags.secretPrompt=false;}
+ else if(S.map==="village"&&S.x>12&&S.y>5){S.story="finale";showStory();}
+ else if(S.map==="forest"&&S.x>=14&&S.y>=11){openStory("secret");}
+ else say("주변을 살펴봤지만 특별한 것은 없어. 반짝이는 오브젝트 근처에서 다시 조사해 봐.");
+}
+function openStory(id){S.story=id;showStory();save(activeSlot,true)}
+function showStory(){
+ const d=scenes[S.story];if(!d){$("storyTitle").textContent="탐험 중";$("kicker").textContent="자유 탐험";$("storyText").textContent="맵을 돌아다니며 단서를 찾아보자. 빛나는 곳 근처에서 조사하기를 눌러."; $("options").innerHTML="";return}
+ $("kicker").textContent=d.k;$("storyTitle").textContent=d.title;$("storyText").textContent=d.text.replace(/\\n/g,"\n");$("options").innerHTML="";
+ d.opts.forEach(([label,fn])=>{const b=document.createElement("button");b.className="option";b.textContent=label;b.onclick=()=>{fn();showStory();render();save(activeSlot,true)};$("options").appendChild(b)});
+}
+function ending(kind){
+ S.ending=kind;S.story="end";let title,text;
+ if(kind==="sky"){title="하늘을 되찾은 밤";text="별은 환한 빛을 남기며 하늘로 돌아갔다. 마을 사람들은 매일 밤 하늘을 올려다보며 별에게 인사했다."}
+ else if(kind==="home"){title="함께 빛나는 별";text="별은 마을 광장의 등불 안에서 살아가기로 했다. 매년 별의 축제가 열리고, 마을은 더는 어둡지 않았다."}
+ else {title="별의 기억";text="별무늬 기록에는 별이 머물러도 다른 별을 잊지 않는 오래된 약속이 적혀 있었다. 별은 마을과 하늘을 잇는 길잡이가 되었다. 숨겨진 결말을 발견했다!"}
+ scenes.end={k:"THE END · "+({sky:"결말 1",home:"결말 2",secret:"숨겨진 결말"}[kind]),title,text,opts:[["새 여행 시작하기",()=>{if(confirm("새 여행을 시작할까?")){S=initial();S.visited=["village"];S.story="intro";save(activeSlot,true);render();showStory()}}],["탐험으로 돌아가기",()=>{S.ending=null;S.story="none";render();showStory()}]]};
+ S.story="end";showStory();say("결말을 기록했어. 다른 선택도 시험해 봐.");save(activeSlot,true);
+}
+function render(){
+ $("region").textContent=({village:"별빛 마을",forest:"속삭임 숲",well:"달빛 우물"}[S.map]);
+ $("shards").textContent=S.items.filter(x=>x==="별 조각").length;
+ $("clock").textContent="밤 "+S.days+"일째";
+ $("inventory").innerHTML=S.items.length?S.items.map(x=>'<span class="badge">'+esc(x)+'</span>').join(""):"아직 발견한 물건이 없어.";
+ $("quest").textContent=S.flags.secret?"완료: 별무늬 기록을 발견했어.":S.flags.well?"진행 중: 숲속의 별무늬를 찾아보자.":"숲 어딘가에 숨겨진 별무늬를 찾아보자.";
+ drawMap();if(S.story!=="none")showStory();else showStory();
+}
+function esc(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function drawMap(){
+ ctx.clearRect(0,0,320,224);
+ const sky=ctx.createLinearGradient(0,0,0,224);sky.addColorStop(0,"#17213e");sky.addColorStop(1,"#243b4a");ctx.fillStyle=sky;ctx.fillRect(0,0,320,224);
+ for(let i=0;i<52;i++){let x=(i*71+13)%320,y=(i*43+19)%205;px(x,y, i%5===0?3:1.5,i%5===0?3:1.5,i%4===0?"#ffe9a6":"#c6d9f2")}
+ px(258,20,18,18,"#ffe7a1");px(264,15,16,18,"#17213e");
+ const grid=maps[S.map];
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const t=grid[y][x],X=x*TILE,Y=y*TILE;
+  if(t==="#"){px(X,Y,16,16,S.map==="forest"?"#254f51":"#2a4c50");px(X+1,Y+1,14,3,"#3a6a63");px(X+2,Y+8,4,3,"#31585b");}
+  else {px(X,Y,16,16,(x+y)%2?"#3b665e":"#416d62");if((x*3+y*5)%7===0)px(X+4,Y+11,2,2,"#689176");}
+  if(t==="t"||t==="#"){if(t==="t"||((x*7+y*3)%13===0&&t==="#"))tree(X,Y)}
+  if(t==="H"){px(X+2,Y+5,12,10,"#d58b7a");px(X,Y+3,16,5,"#704763");px(X+4,Y,8,5,"#966079");px(X+6,Y+9,4,6,"#40334d");}
+  if(t==="D"){px(X+2,Y+1,12,14,"#b8a77f");px(X+5,Y+5,6,10,"#6d4c50");}
+  if(t==="W"){px(X+1,Y+5,14,8,"#a4b5ad");px(X+3,Y+7,10,4,"#273d53");px(X+6,Y+8,4,2,"#85e3e1");}
+  if(t==="S"){px(X+2,Y+2,12,12,"#d4b8f5");px(X+5,Y+5,6,6,"#fff0ac");}
+  if(t==="="){px(X,Y,16,16,"#9b806b");px(X+2,Y+3,4,2,"#c4a17b");}
+ }
+ // little decorative lamps
+ if(S.map==="village"){lamp(4,6);lamp(13,2);lamp(16,9)}
+ if(S.map==="forest"){lamp(3,9);lamp(14,4)}
+ if(S.map==="well"){lamp(9,8);lamp(13,9)}
+ // player idle bob
+ const bob=Math.floor(Date.now()/280)%2;
+ const X=S.x*TILE,Y=S.y*TILE-bob;
+ px(X+4,Y+2,8,6,"#493149");px(X+3,Y+6,10,7,"#e9b990");px(X+3,Y+13,10,9,"#779bd0");
+ px(X+5,Y+9,2,2,"#263149");px(X+10,Y+9,2,2,"#263149");px(X+4,Y+22,3,4,"#f1dca9");px(X+10,Y+22,3,4,"#f1dca9");
+ px(X+13,Y+13,3,5,"#ffe38f");px(X+14,Y+11,2,2,"#fff4c7");
+ // small top hint
+ px(6,5,3,3,"#a5efd1");ctx.fillStyle="#eaf1ff";ctx.font="7px monospace";ctx.fillText(S.map==="village"?"VILLAGE":S.map==="forest"?"WHISPER WOODS":"MOON WELL",13,11);
+}
+function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
+function tree(X,Y){px(X+3,Y+5,10,10,"#276052");px(X+5,Y+2,7,9,"#347c6c");px(X+7,Y,4,5,"#4a9b7a");px(X+7,Y+13,3,3,"#79536a");}
+function lamp(x,y){const X=x*16,Y=y*16;px(X+6,Y+6,4,5,"#f5ca7b");px(X+4,Y+4,8,2,"#f5e3a6");px(X+7,Y+2,2,2,"#fff3c2")}
+function showModal(html){$("modal").innerHTML=html;$("overlay").classList.add("show")}
+function closeModal(){$("overlay").classList.remove("show")}
+function slots(){
+ let html="<h2>저장 슬롯</h2><p>이 브라우저에 최대 3개의 여행을 따로 저장할 수 있어.</p>";
+ for(let i=0;i<3;i++){let s=loadSlot(i);html+='<div class="slot"><b>슬롯 '+(i+1)+'</b><p>'+(s?esc(({village:"별빛 마을",forest:"속삭임 숲",well:"달빛 우물"}[s.map]||s.map))+" · 아이템 "+s.items.length+"개 · "+(s.ending?"엔딩 도달":"탐험 중"):"빈 슬롯")+'</p><div class="slot-actions"><button class="btn" data-load="'+i+'">불러오기</button><button class="btn" data-save="'+i+'">현재 저장</button></div></div>'}
+ html+='<button class="btn close" id="closeModal">닫기</button>';showModal(html);
+ document.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>{let n=+b.dataset.load;let v=loadSlot(n);if(v){S=v;activeSlot=n;closeModal();render();say("슬롯 "+(n+1)+"을 불러왔어.");}else say("아직 비어 있는 슬롯이야.")});
+ document.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>{activeSlot=+b.dataset.save;save(activeSlot,true);slots();say("슬롯 "+(activeSlot+1)+"에 저장했어.")});
+ $("closeModal").onclick=closeModal;
+}
+$("slotsBtn").onclick=slots;
+$("bagBtn").onclick=()=>showModal("<h2>가방</h2><p>"+(S.items.length?S.items.map(esc).join(" · "):"아직 아이템이 없어.")+"</p><button class='btn close' id='closeModal'>닫기</button>");
+$("mapBtn").onclick=()=>showModal("<h2>여행 지도</h2><p>별빛 마을 → 속삭임 숲 → 달빛 우물</p><p>마을 북동쪽 출구를 찾아 숲으로 이동해. 숲의 남동쪽 길을 따라가면 우물이 있어.</p><button class='btn close' id='closeModal'>닫기</button>");
+$("journalBtn").onclick=()=>showModal("<h2>여행 일지</h2><p>"+(S.visited.length?"방문한 장소: "+S.visited.map(x=>({village:"별빛 마을",forest:"속삭임 숲",well:"달빛 우물"}[x]||x)).join(" → "):"아직 여행 기록이 없어.")+"</p><p>"+(S.flags.secret?"비밀 기록: 별의 기억을 읽었다.":"비밀 기록: 아직 발견하지 못했다.")+"</p><button class='btn close' id='closeModal'>닫기</button>");
+$("interactBtn").onclick=interact;
+document.querySelectorAll("[data-dir]").forEach(b=>b.addEventListener("click",()=>{const d=b.dataset.dir;move(d==="left"?-1:d==="right"?1:0,d==="up"?-1:d==="down"?1:0)}));
+let touchStart=null;
+canvas.addEventListener("pointerdown",e=>{touchStart={x:e.offsetX/(canvas.clientWidth/canvas.width),y:e.offsetY/(canvas.clientHeight/canvas.height)}});
+canvas.addEventListener("pointerup",e=>{
+ if(!touchStart)return;
+ const x=e.offsetX/(canvas.clientWidth/canvas.width),y=e.offsetY/(canvas.clientHeight/canvas.height);
+ const dx=x-touchStart.x,dy=y-touchStart.y;touchStart=null;
+ if(Math.abs(dx)+Math.abs(dy)>14){if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1,0);else move(0,dy>0?1:-1);return}
+ const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);
+ if(Math.abs(tx-S.x)+Math.abs(ty-S.y)<=1){interact();return}
+ const dx2=tx-S.x,dy2=ty-S.y;if(Math.abs(dx2)>Math.abs(dy2))move(Math.sign(dx2),0);else move(0,Math.sign(dy2));
+});
+window.addEventListener("keydown",e=>{const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]}[e.key];if(d){e.preventDefault();move(...d)}if(e.key===" "||e.key==="Enter")interact()});
+setInterval(()=>{if(S.story==="none"&&!S.ending){drawMap()}},260);
+if(!S.visited.includes(S.map))S.visited.push(S.map);
+render();
+})();
+</script>
+</body>
+</html>
